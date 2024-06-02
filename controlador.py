@@ -6,25 +6,26 @@ from vista import VentanaPrincipal
 class Controlador:
     def __init__(self):
         self.app = QApplication(sys.argv)
-        self.vista = VentanaPrincipal()
         self.base_datos = BaseDatos('pacientes.db')
-        self.cargar_pacientes()
+        self.base_datos.crear_tabla_pacientes()
+        self.base_datos.crear_tabla_imagenes()
+        self.vista = VentanaPrincipal(self.base_datos)
         self.conectar_eventos()
-    
-    def conectar_eventos(self):
-        self.vista.mostrar_formulario_paciente()
-        self.vista.formulario_paciente.paciente_agregado.connect(self.agregar_paciente)
-        self.vista.closeEvent = self.guardar_datos_salir
-    
-    def cargar_pacientes(self):
-        for id_paciente in self.base_datos.obtener_lista_pacientes():
-            paciente = self.base_datos.obtener_paciente(id_paciente)
-            if paciente:
-                self.vista.agregar_paciente(paciente)
 
-    def agregar_paciente(self, paciente):
-        self.base_datos.agregar_paciente(paciente)
-        self.vista.agregar_paciente(paciente)
+    def conectar_eventos(self):
+        self.vista.boton_agregar_paciente.clicked.connect(self.mostrar_formulario_paciente)
+        self.vista.boton_buscar_paciente.clicked.connect(self.buscar_paciente)
+        self.vista.boton_ver_todos_pacientes.clicked.connect(self.ver_todos_pacientes)
+        self.vista.closeEvent = self.guardar_datos_salir
+
+    def mostrar_formulario_paciente(self):
+        self.vista.mostrar_formulario_paciente()
+
+    def buscar_paciente(self):
+        self.vista.buscar_paciente()
+
+    def ver_todos_pacientes(self):
+        self.vista.ver_todos_pacientes()
 
     def guardar_datos_salir(self, event):
         self.base_datos.cerrar_conexion()

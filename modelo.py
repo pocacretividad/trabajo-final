@@ -3,8 +3,6 @@ import os
 from datetime import datetime
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 
 class Paciente:
     def __init__(self, id_paciente, nombre, apellido, edad, fecha_registro):
@@ -18,14 +16,13 @@ class Paciente:
     def agregar_imagen(self, ruta_imagen, fecha_toma):
         self.imagenes.append((ruta_imagen, fecha_toma))
 
-    def calcular_grasa_higado(self):
-        grasa_total = 0
-        for ruta_imagen, _ in self.imagenes:
-            imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
-            _, binarizada = cv2.threshold(imagen, 127, 255, cv2.THRESH_BINARY)
-            porcentaje_grasa = np.count_nonzero(binarizada) / (binarizada.shape[0] * binarizada.shape[1]) * 100
-            grasa_total += porcentaje_grasa
-        return grasa_total / len(self.imagenes) if len(self.imagenes) > 0 else 0
+    def calcular_porcentaje_grasa(self, ruta_imagen):
+        imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+        _, binarizada = cv2.threshold(imagen, 127, 255, cv2.THRESH_BINARY)
+        total_pixeles = binarizada.shape[0] * binarizada.shape[1]
+        pixeles_grasa = np.count_nonzero(binarizada)
+        porcentaje_grasa = (pixeles_grasa / total_pixeles) * 100
+        return porcentaje_grasa
 
 class BaseDatos:
     def __init__(self, nombre_archivo):
@@ -86,10 +83,3 @@ class BaseDatos:
 
     def cerrar_conexion(self):
         self.conexion.close()
-
-# Inicializar la base de datos
-if not os.path.exists('pacientes.db'):
-    db = BaseDatos('pacientes.db')
-    db.crear_tabla_pacientes()
-    db.crear_tabla_imagenes()
-    db.cerrar_conexion()

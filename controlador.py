@@ -7,10 +7,9 @@ class Controlador:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.base_datos = BaseDatos('pacientes.db')
-        self.base_datos.crear_tabla_pacientes()
-        self.base_datos.crear_tabla_imagenes()
         self.vista = VentanaPrincipal(self.base_datos)
         self.conectar_eventos()
+        self.vista.cargar_pacientes()
 
     def conectar_eventos(self):
         self.vista.boton_agregar_paciente.clicked.connect(self.mostrar_formulario_paciente)
@@ -38,3 +37,6 @@ class Controlador:
 if __name__ == "__main__":
     controlador = Controlador()
     controlador.ejecutar()
+    
+    #cambios interfaz y base de datos
+    #interfaz regular , muestra graficas feas

@@ -1,9 +1,10 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QTextEdit, QInputDialog, QGridLayout, QDialog
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit,QScrollArea, QPushButton, QFileDialog, QInputDialog, QHBoxLayout
 from PyQt5.QtGui import QPixmap
 from PyQt5 import QtCore
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import cv2
 import numpy as np
 from modelo import Paciente
 
@@ -37,6 +38,14 @@ class VentanaPrincipal(QMainWindow):
 
         self.layout_pacientes = QVBoxLayout()
         self.layout_principal.addLayout(self.layout_pacientes)
+        
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area_widget = QWidget()
+        self.scroll_area_layout = QVBoxLayout()
+        self.scroll_area_widget.setLayout(self.scroll_area_layout)
+        self.scroll_area.setWidget(self.scroll_area_widget)
+        self.layout_principal.addWidget(self.scroll_area)
 
     def mostrar_formulario_paciente(self):
         self.formulario_paciente = FormularioPaciente(self.base_datos)
@@ -122,24 +131,27 @@ class FormularioPaciente(QWidget):
     def seleccionar_imagen(self):
         ruta_imagen, _ = QFileDialog.getOpenFileName(self, "Seleccionar Imagen", "", "Imágenes (*.png *.jpg)")
         if ruta_imagen:
-            fecha_toma, ok = QInputDialog.getText(self, "Fecha de Toma", "Ingrese la fecha de toma (YYYY-MM-DD):")
-            if ok:
-                self.imagenes.append((ruta_imagen, fecha_toma))
+            self.imagenes.append(ruta_imagen)
 
     def guardar_paciente(self):
         nombre = self.input_nombre.text()
         apellido = self.input_apellido.text()
         edad = int(self.input_edad.text())
         id_paciente = int(self.input_id.text())
+        fecha_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if nombre and apellido and edad and id_paciente and self.imagenes:
-            fecha_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            paciente = Paciente(id_paciente, nombre, apellido, edad, fecha_registro)
-            for ruta_imagen, fecha_toma in self.imagenes:
-                paciente.agregar_imagen(ruta_imagen, fecha_toma)
-                self.base_datos.agregar_imagen_paciente(id_paciente, ruta_imagen, fecha_toma)
-            self.paciente_agregado.emit(paciente)
-            self.close()
+        paciente = Paciente(id_paciente, nombre, apellido, edad, fecha_registro)
+        for ruta_imagen in self.imagenes:
+            fecha_toma = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            paciente.agregar_imagen(ruta_imagen, fecha_toma)
+
+        self.base_datos.agregar_paciente(paciente)
+        for ruta_imagen in self.imagenes:
+            fecha_toma = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.base_datos.agregar_imagen_paciente(id_paciente, ruta_imagen, fecha_toma)
+
+        self.paciente_agregado.emit(paciente)
+        self.close()
 
 class PacienteWidget(QWidget):
     def __init__(self, paciente, base_datos):
@@ -151,22 +163,22 @@ class PacienteWidget(QWidget):
         self.setLayout(self.layout)
 
         self.label_nombre = QLabel(f"Nombre: {self.paciente.nombre}")
-        self.layout.addWidget(self.label_nombre)
-
         self.label_apellido = QLabel(f"Apellido: {self.paciente.apellido}")
-        self.layout.addWidget(self.label_apellido)
-
         self.label_edad = QLabel(f"Edad: {self.paciente.edad}")
+        self.label_id=QLabel(f"id: {self.paciente.id_paciente}")#ojo
+        self.label_fecha_registro = QLabel(f"Fecha de Registro: {self.paciente.fecha_registro}")
+
+        self.layout.addWidget(self.label_nombre)
+        self.layout.addWidget(self.label_apellido)
         self.layout.addWidget(self.label_edad)
-
-        self.label_id = QLabel(f"ID: {self.paciente.id_paciente}")
         self.layout.addWidget(self.label_id)
+        self.layout.addWidget(self.label_fecha_registro)
 
-        self.layout_imagenes = QGridLayout()
-        self.layout.addLayout(self.layout_imagenes)
-
-        self.mostrar_imagenes()
-
+        for ruta_imagen, fecha_toma in self.paciente.imagenes:
+            label_imagen = QLabel(f"Imagen: {ruta_imagen}, Fecha: {fecha_toma}")
+            self.layout.addWidget(label_imagen)
+            self.mostrar_imagen(ruta_imagen)
+        
         self.boton_agregar_imagen = QPushButton("Agregar Imagen")
         self.boton_agregar_imagen.clicked.connect(self.agregar_imagen)
         self.layout.addWidget(self.boton_agregar_imagen)
@@ -175,51 +187,23 @@ class PacienteWidget(QWidget):
         self.boton_ver_analisis.clicked.connect(self.ver_analisis)
         self.layout.addWidget(self.boton_ver_analisis)
 
-    def mostrar_imagenes(self):
-        for i in range(self.layout_imagenes.count()):
-            self.layout_imagenes.itemAt(i).widget().deleteLater()
-        
-        for i, (ruta_imagen, fecha_toma) in enumerate(self.paciente.imagenes):
-            label_imagen = QLabel()
-            label_imagen.setPixmap(QPixmap(ruta_imagen).scaled(100, 100, QtCore.Qt.KeepAspectRatio))
-            self.layout_imagenes.addWidget(label_imagen, i // 3, i % 3)
-            label_fecha = QLabel(fecha_toma)
-            self.layout_imagenes.addWidget(label_fecha, i // 3, (i % 3) + 1)
+    def mostrar_imagen(self, ruta_imagen):
+        imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+        imagen_redimensionada = cv2.resize(imagen, (300, 300))  # Redimensionamos la imagen
+        fig, ax = plt.subplots(figsize=(3, 3))  # Reducimos el tamaño del gráfico
+        ax.imshow(imagen_redimensionada, cmap='gray')
+        canvas = FigureCanvas(fig)
+        self.layout.addWidget(canvas)
 
     def agregar_imagen(self):
         ruta_imagen, _ = QFileDialog.getOpenFileName(self, "Seleccionar Imagen", "", "Imágenes (*.png *.jpg)")
         if ruta_imagen:
-            fecha_toma, ok = QInputDialog.getText(self, "Fecha de Toma", "Ingrese la fecha de toma (YYYY-MM-DD):")
-            if ok:
-                self.paciente.agregar_imagen(ruta_imagen, fecha_toma)
-                self.base_datos.agregar_imagen_paciente(self.paciente.id_paciente, ruta_imagen, fecha_toma)
-                self.mostrar_imagenes()
+            fecha_toma = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.base_datos.agregar_imagen_paciente(self.paciente.id_paciente, ruta_imagen, fecha_toma)
+            self.paciente.agregar_imagen(ruta_imagen, fecha_toma)
+            self.mostrar_imagen(ruta_imagen)
 
     def ver_analisis(self):
-        analisis_dialog = AnalisisDialog(self.paciente)
-        analisis_dialog.exec_()
-
-class AnalisisDialog(QDialog):
-    def __init__(self, paciente):
-        super().__init__()
-
-        self.setWindowTitle("Análisis del Paciente")
-        self.setGeometry(200, 200, 600, 400)
-
-        self.paciente = paciente
-
-        self.layout_principal = QVBoxLayout()
-        self.setLayout(self.layout_principal)
-
-        self.label_titulo = QLabel(f"Análisis del Paciente {self.paciente.id_paciente}")
-        self.layout_principal.addWidget(self.label_titulo)
-
-        self.layout_grafica = QVBoxLayout()
-        self.layout_principal.addLayout(self.layout_grafica)
-
-        self.mostrar_grafica()
-
-    def mostrar_grafica(self):
         fechas = [imagen[1] for imagen in self.paciente.imagenes]
         grasas = [self.paciente.calcular_porcentaje_grasa(imagen[0]) for imagen in self.paciente.imagenes]
 
@@ -238,7 +222,16 @@ class AnalisisDialog(QDialog):
         plt.tight_layout()
 
         canvas = FigureCanvas(fig)
-        self.layout_grafica.addWidget(canvas)
+        self.layout.addWidget(canvas)
+
+    def calcular_porcentaje_grasa(self, ruta_imagen):
+        imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+        umbral, imagen_binaria = cv2.threshold(imagen, 127, 255, cv2.THRESH_BINARY)
+        total_pixeles = imagen.size
+        pixeles_blancos = cv2.countNonZero(imagen_binaria)
+        pixeles_negros = total_pixeles - pixeles_blancos
+        porcentaje_grasa = (pixeles_negros / total_pixeles) * 100
+        return {'porcentaje_grasa': porcentaje_grasa}
 
 class FormularioBusqueda(QWidget):
     paciente_buscado = QtCore.pyqtSignal(int)
@@ -250,7 +243,7 @@ class FormularioBusqueda(QWidget):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
-        self.label_id = QLabel("Ingrese el ID del Paciente:")
+        self.label_id = QLabel("Ingrese el ID del paciente:")
         self.input_id = QLineEdit()
         self.layout.addWidget(self.label_id)
         self.layout.addWidget(self.input_id)
@@ -262,6 +255,4 @@ class FormularioBusqueda(QWidget):
     def buscar_paciente(self):
         id_paciente = int(self.input_id.text())
         self.paciente_buscado.emit(id_paciente)
-
-
-
+        self.close()

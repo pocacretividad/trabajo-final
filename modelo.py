@@ -1,8 +1,7 @@
 import sqlite3
-import os
-from datetime import datetime
 import cv2
 import numpy as np
+from datetime import datetime
 
 class Paciente:
     def __init__(self, id_paciente, nombre, apellido, edad, fecha_registro):
@@ -29,6 +28,8 @@ class BaseDatos:
         self.nombre_archivo = nombre_archivo
         self.conexion = sqlite3.connect(nombre_archivo)
         self.cursor = self.conexion.cursor()
+        self.crear_tabla_pacientes()
+        self.crear_tabla_imagenes()
 
     def crear_tabla_pacientes(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS pacientes (
@@ -44,7 +45,8 @@ class BaseDatos:
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS imagenes (
                                 id_paciente INTEGER,
                                 ruta TEXT,
-                                fecha_toma TEXT
+                                fecha_toma TEXT,
+                                FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
                             )''')
         self.conexion.commit()
 

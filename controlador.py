@@ -38,5 +38,6 @@ if __name__ == "__main__":
     controlador = Controlador()
     controlador.ejecutar()
     
-    #cambios interfaz y base de datos
-    #interfaz regular , muestra graficas feas
+    
+    
+    

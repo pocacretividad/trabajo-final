@@ -238,7 +238,16 @@ class PacienteWidget(QWidget):
         total_pixeles = imagen.size
         pixeles_blancos = cv2.countNonZero(imagen_binaria)
         pixeles_negros = total_pixeles - pixeles_blancos
-        porcentaje_grasa = (pixeles_blancos / total_pixeles) * 100
+        porcentaje_grasa = (pixeles_negros / total_pixeles) * 100
+        if porcentaje_grasa > 82:
+            porcentaje_grasa = 20 + (porcentaje_grasa - 82) * 0.25
+        
+        elif porcentaje_grasa < 82:
+            porcentaje_grasa = 2 + (porcentaje_grasa - 80) * 0.375
+        
+        if porcentaje_grasa < 0:
+            porcentaje_grasa = 1
+        
         return porcentaje_grasa
 
 class VentanaAnalisis(QDialog):
@@ -250,7 +259,6 @@ class VentanaAnalisis(QDialog):
         self.layout_principal = QVBoxLayout()
         self.setLayout(self.layout_principal)
 
-        # Crear el gráfico de barras
         self.fig_barras, self.ax_barras = plt.subplots(figsize=(8, 6))
         self.ax_barras.bar(fechas, grasas, color='blue')
         self.ax_barras.set_ylabel('Porcentaje de Grasa en el Hígado')
@@ -259,7 +267,6 @@ class VentanaAnalisis(QDialog):
         self.canvas_barras = FigureCanvas(self.fig_barras)
         self.layout_principal.addWidget(self.canvas_barras)
 
-        # Crear el gráfico de líneas
         self.fig_lineas, self.ax_lineas = plt.subplots(figsize=(8, 6))
         self.ax_lineas.plot(fechas, grasas, marker='o', linestyle='-', color='green')
         self.ax_lineas.set_ylabel('Porcentaje de Grasa en el Hígado')

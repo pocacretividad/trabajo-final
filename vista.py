@@ -5,7 +5,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import cv2
-import numpy as np
+
 from modelo import Paciente
 
 class VentanaPrincipal(QMainWindow):

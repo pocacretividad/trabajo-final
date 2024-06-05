@@ -15,14 +15,6 @@ class Paciente:
     def agregar_imagen(self, ruta_imagen, fecha_toma):
         self.imagenes.append((ruta_imagen, fecha_toma))
 
-    def calcular_porcentaje_grasa(self, ruta_imagen):
-        imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
-        _, binarizada = cv2.threshold(imagen, 127, 255, cv2.THRESH_BINARY)
-        total_pixeles = binarizada.shape[0] * binarizada.shape[1]
-        pixeles_grasa = np.count_nonzero(binarizada)
-        porcentaje_grasa = (pixeles_grasa / total_pixeles) * 100
-        return porcentaje_grasa
-
 class BaseDatos:
     def __init__(self, nombre_archivo):
         self.nombre_archivo = nombre_archivo
@@ -85,3 +77,21 @@ class BaseDatos:
 
     def cerrar_conexion(self):
         self.conexion.close()
+
+    @staticmethod
+    def calcular_porcentaje_grasa(ruta_imagen):
+        imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+        umbral, imagen_binaria = cv2.threshold(imagen, 127, 255, cv2.THRESH_BINARY)
+        total_pixeles = imagen.size
+        pixeles_blancos = cv2.countNonZero(imagen_binaria)
+        pixeles_negros = total_pixeles - pixeles_blancos
+        porcentaje_grasa = (pixeles_negros / total_pixeles) * 100
+
+        if porcentaje_grasa > 82:
+            porcentaje_grasa = 20 + (porcentaje_grasa - 82) * 0.25
+        elif porcentaje_grasa < 82:
+            porcentaje_grasa = 2 + (porcentaje_grasa - 80) * 0.375
+        if porcentaje_grasa < 0:
+            porcentaje_grasa = 1
+
+        return porcentaje_grasa

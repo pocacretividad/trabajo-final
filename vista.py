@@ -4,9 +4,7 @@ from PyQt5 import QtCore
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import cv2
-
-from modelo import Paciente
+from modelo import Paciente, BaseDatos
 
 class VentanaPrincipal(QMainWindow):
     def __init__(self, base_datos):
@@ -125,7 +123,7 @@ class FormularioPaciente(QWidget):
     def seleccionar_imagen(self):
         ruta_imagen, _ = QFileDialog.getOpenFileName(self, "Seleccionar Imagen", "", "Imágenes (*.png *.jpg)")
         if ruta_imagen:
-            self.imagenes.append(ruta_imagen)
+            self.imagenes.append((ruta_imagen, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     def guardar_paciente(self):
         nombre = self.input_nombre.text()
@@ -135,10 +133,8 @@ class FormularioPaciente(QWidget):
         fecha_registro = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         paciente = Paciente(id_paciente, nombre, apellido, edad, fecha_registro)
-
         for imagen in self.imagenes:
-            fecha_toma = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            paciente.agregar_imagen(imagen, fecha_toma)
+            paciente.agregar_imagen(imagen[0], imagen[1])
 
         self.base_datos.agregar_paciente(paciente)
         for imagen in paciente.imagenes:
@@ -186,7 +182,7 @@ class PacienteWidget(QWidget):
         self.label_edad = QLabel(f"Edad: {paciente.edad}")
         self.layout.addWidget(self.label_edad)
         
-        self.label_id_paciente=QLabel( f"ID: {paciente.id_paciente} ")
+        self.label_id_paciente = QLabel(f"ID: {paciente.id_paciente}")
         self.layout.addWidget(self.label_id_paciente)
 
         self.label_fecha_registro = QLabel(f"Fecha de Registro: {paciente.fecha_registro}")
@@ -212,7 +208,7 @@ class PacienteWidget(QWidget):
         label_imagen.setPixmap(pixmap.scaled(200, 200, QtCore.Qt.KeepAspectRatio))
         self.layout.addWidget(label_imagen)
 
-        porcentaje_grasa = self.calcular_porcentaje_grasa(ruta_imagen)
+        porcentaje_grasa = self.base_datos.calcular_porcentaje_grasa(ruta_imagen)
         label_porcentaje_grasa = QLabel(f"Porcentaje de Grasa: {porcentaje_grasa:.2f}%")
         self.layout.addWidget(label_porcentaje_grasa)
 
@@ -226,29 +222,10 @@ class PacienteWidget(QWidget):
 
     def ver_analisis(self):
         fechas = [imagen[1] for imagen in self.paciente.imagenes]
-        grasas = [self.calcular_porcentaje_grasa(imagen[0]) for imagen in self.paciente.imagenes]
+        grasas = [self.base_datos.calcular_porcentaje_grasa(imagen[0]) for imagen in self.paciente.imagenes]
 
         ventana_analisis = VentanaAnalisis(fechas, grasas)
         ventana_analisis.exec_()
-        
-
-    def calcular_porcentaje_grasa(self, ruta_imagen):
-        imagen = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
-        umbral, imagen_binaria = cv2.threshold(imagen, 127, 255, cv2.THRESH_BINARY)
-        total_pixeles = imagen.size
-        pixeles_blancos = cv2.countNonZero(imagen_binaria)
-        pixeles_negros = total_pixeles - pixeles_blancos
-        porcentaje_grasa = (pixeles_negros / total_pixeles) * 100
-        if porcentaje_grasa > 82:
-            porcentaje_grasa = 20 + (porcentaje_grasa - 82) * 0.25
-        
-        elif porcentaje_grasa < 82:
-            porcentaje_grasa = 2 + (porcentaje_grasa - 80) * 0.375
-        
-        if porcentaje_grasa < 0:
-            porcentaje_grasa = 1
-        
-        return porcentaje_grasa
 
 class VentanaAnalisis(QDialog):
     def __init__(self, fechas, grasas):
@@ -274,4 +251,3 @@ class VentanaAnalisis(QDialog):
         self.ax_lineas.set_ylim(0, 100)
         self.canvas_lineas = FigureCanvas(self.fig_lineas)
         self.layout_principal.addWidget(self.canvas_lineas)
-

@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication
 import sys
-from modelo import BaseDatos, Paciente
+from modelo import BaseDatos
 from vista import VentanaPrincipal
 
 class Controlador:
@@ -37,7 +37,3 @@ class Controlador:
 if __name__ == "__main__":
     controlador = Controlador()
     controlador.ejecutar()
-    
-    
-    
-    
